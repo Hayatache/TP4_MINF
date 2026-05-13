@@ -1,15 +1,15 @@
 # TP4_MINF
-## explication complementaire gestion memoire de l'EEPROM
+## Explication complementaire gestion memoire de l'EEPROM
 
-## explication complementaire decodage de la trame
+## Explication complementaire decodage de la trame
 
-le decodage se faire en plusieurs etape pouvant mener a une detection d'erreur.
-### 1. reperage du debut et fin de trame
+Le decodage se faire en plusieurs etape pouvant mener a une detection d'erreur.
+### 1. Reperage du debut et fin de trame
 dans un premiere temps,
 ``` C
 if(USBReadBuffer[0] =='!')
 ```
-va regarder si il y a bien le debut de la trame qui est un "!".
+Va regarder si il y a bien le debut de la trame qui est un "!".
 ensuite, 
 ``` C
 for(index = 0; index <= appData.numBytesRead; index++){
@@ -18,12 +18,12 @@ for(index = 0; index <= appData.numBytesRead; index++){
     }
 }
 ```
-nous allons scanner la trame complete pour trouver si il y a le caractere de fin de trame qui est "#".
-si c'est le cas, la trame est conciderer comme valide pour la prochaine etape
+Nous allons scanner la trame complete pour trouver si il y a le caractere de fin de trame qui est "#".
+Si c'est le cas, la trame est conciderer comme valide pour la prochaine etape
 ### 2. Reperage des debuts de chaque information
-etand donné que nous devons trouvé les infos suivantes : 
+Etand donné que nous devons trouvé les infos suivantes : 
 
-| information dans la trame | caractere qui defini l'information |
+| Information dans la trame | Caractere qui defini l'information |
 |------|------|
 | formes | S |
 | frequence  | F |
@@ -31,8 +31,8 @@ etand donné que nous devons trouvé les infos suivantes :
 | offset  | O |
 | sauvegarde  | W | 
 
-une fois que nous avons trouver un des caractere qui defini l'information, nous remplacons ce caracter par "/0" pour definir une fin de chaine.
-nous enregistrons aussi la position dans le tableau de caractere du debut de la valeur numerique.
+Une fois que nous avons trouver un des caractere qui defini l'information, nous remplacons ce caracter par "/0" pour definir une fin de chaine.
+Nous enregistrons aussi la position dans le tableau de caractere du debut de la valeur numerique.
 
 ``` C
         for(index = 0; index <= appData.numBytesRead; index++){
@@ -61,5 +61,5 @@ nous enregistrons aussi la position dans le tableau de caractere du debut de la 
 ```
 
 #### Important !
-nous devons faire "+2" pour trouver le debut d'une valeur car la trame etant xxxF=3000xxxx, nous trouvons la valuer de F a l'adresse 3 et le debut du 3000 a l'adresse 5.
-autre information importante, nous devons avoir une verification pour trouver si un "S" a été vu car le sinus etant defini aussi par "S", il sera detecter et supprimer ce qui nous fera perdre l'information du sinus.
+Nous devons faire "+2" pour trouver le debut d'une valeur car la trame etant xxxF=3000xxxx, nous trouvons la valuer de F a l'adresse 3 et le debut du 3000 a l'adresse 5.
+Autre information importante, nous devons avoir une verification pour trouver si un "S" a été vu car le sinus etant defini aussi par "S", il sera detecter et supprimer ce qui nous fera perdre l'information du sinus.
