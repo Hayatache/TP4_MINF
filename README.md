@@ -41,22 +41,6 @@ Nous enregistrons aussi la position dans le tableau de caractere du debut de la 
                 first_S_found = true;
                 USBReadBuffer[index] = '\0';
             }
-            else if(USBReadBuffer[index] == 'F'){
-                start_frequence = index +2;
-                USBReadBuffer[index] = '\0';
-            }
-            else if(USBReadBuffer[index] == 'A'){
-                start_amplitude = index +2;
-                USBReadBuffer[index] = '\0';
-            }
-            else if(USBReadBuffer[index] == 'O'){
-                start_offset = index +2;
-                USBReadBuffer[index] = '\0';
-            }
-            else if(USBReadBuffer[index] == 'W'){
-                start_sauvegarde = index +2;
-                USBReadBuffer[index] = '\0';
-            }
         }
 ```
 
