@@ -1,8 +1,8 @@
 # TP4_MINF
 ## Explication complementaire gestion memoire de l'EEPROM
-# Initialisation du bus I2C
+## Initialisation du bus I2C
 
-## Fonction
+#### Fonction
 
 ```C
 void I2C_InitMCP79411(void)
@@ -14,7 +14,7 @@ void I2C_InitMCP79411(void)
 
 ---
 
-## Explication
+#### Explication
 
 Cette fonction initialise la communication I2C.
 
@@ -34,9 +34,9 @@ configure le module I2C du microcontrôleur.
 
 ---
 
-# Écriture dans l'EEPROM
+## Écriture dans l'EEPROM
 
-## Fonction complète
+### Fonction complète
 
 ```C
 void I2C_WriteSEEPROM(void *SrcData, uint32_t EEpromAddr, uint16_t NbBytes)
@@ -44,7 +44,7 @@ void I2C_WriteSEEPROM(void *SrcData, uint32_t EEpromAddr, uint16_t NbBytes)
 
 ---
 
-## Paramètres
+#### Paramètres
 
 | Paramètre  | Description                     |
 | ---------- | ------------------------------- |
@@ -54,7 +54,7 @@ void I2C_WriteSEEPROM(void *SrcData, uint32_t EEpromAddr, uint16_t NbBytes)
 
 ---
 
-# Boucle principale d'écriture
+### Boucle principale d'écriture
 
 ```C
 for(y = 0; y < NbBytes;)
@@ -74,7 +74,7 @@ car le programme avance page par page.
 
 ---
 
-# Calcul de l'adresse courante
+### Calcul de l'adresse courante
 
 ```C
 current_addr = EEpromAddr + y;
@@ -84,7 +84,7 @@ Cette ligne permet de connaître l'adresse exacte où écrire les prochaines don
 
 ---
 
-## Exemple
+#### Exemple
 
 | Adresse de départ | y  | Adresse actuelle |
 | ----------------- | -- | ---------------- |
@@ -94,9 +94,9 @@ Cette ligne permet de connaître l'adresse exacte où écrire les prochaines don
 
 ---
 
-# Gestion des pages mémoire
+### Gestion des pages mémoire
 
-## Calcul de l'espace restant
+#### Calcul de l'espace restant
 
 ```C
 espaceRestant = MCP79411_PAGE_SIZE - (current_addr % MCP79411_PAGE_SIZE);
@@ -110,7 +110,7 @@ Cette ligne calcule le nombre d'octets encore disponibles avant la fin de la pag
 
 ---
 
-## Exemple
+#### Exemple
 
 Si :
 
@@ -136,7 +136,7 @@ avant de changer de page.
 
 ---
 
-# Choix du nombre d'octets à écrire
+### Choix du nombre d'octets à écrire
 
 ```C
 if((NbBytes - y) < espaceRestant)
@@ -153,7 +153,7 @@ Cette partie permet de choisir combien d'octets peuvent être écrits sans dépa
 
 ---
 
-## Deux cas possibles
+#### Deux cas possibles
 
 | Situation                                         | Action                                                  |
 | ------------------------------------------------- | ------------------------------------------------------- |
@@ -162,7 +162,7 @@ Cette partie permet de choisir combien d'octets peuvent être écrits sans dépa
 
 ---
 
-# Attente de disponibilité du composant
+### Attente de disponibilité du composant
 
 ```C
 do
@@ -193,7 +193,7 @@ Le programme tente donc de communiquer jusqu'à ce que le composant réponde cor
 
 ---
 
-# Envoi de l'adresse mémoire
+## Envoi de l'adresse mémoire
 
 ```C
 i2c_write((uint8_t)current_addr);
@@ -203,7 +203,7 @@ Cette instruction envoie l'adresse interne de l'EEPROM.
 
 ---
 
-# Envoi des données
+## Envoi des données
 
 ```C
 for(i = 0; i < NbBytesPage; i++)
@@ -216,7 +216,7 @@ Cette boucle envoie tous les octets de la page.
 
 ---
 
-## Exemple
+#### Exemple
 
 Si :
 
@@ -236,7 +236,7 @@ seront envoyés.
 
 ---
 
-# Fin de transmission
+## Fin de transmission
 
 ```C
 i2c_stop();
@@ -246,7 +246,7 @@ Cette instruction termine la communication I2C et libère le bus.
 
 ---
 
-# Passage à la page suivante
+## Passage à la page suivante
 
 ```C
 y += NbBytesPage;
@@ -256,9 +256,9 @@ Permet de passer directement au bloc suivant.
 
 ---
 
-# Lecture dans l'EEPROM
+## Lecture dans l'EEPROM
 
-## Fonction complète
+### Fonction complète
 
 ```C
 void I2C_ReadSEEPROM(void *DstData, uint32_t EEpromAddr, uint16_t NbBytes)
@@ -266,7 +266,7 @@ void I2C_ReadSEEPROM(void *DstData, uint32_t EEpromAddr, uint16_t NbBytes)
 
 ---
 
-# Vérification de sécurité
+### Vérification de sécurité
 
 ```C
 if(NbBytes == 0)
@@ -279,7 +279,7 @@ Si aucun octet n'est demandé, la fonction quitte immédiatement.
 
 ---
 
-# Vérification de disponibilité
+### Vérification de disponibilité
 
 Le programme attend que l'EEPROM soit disponible avant de commencer la lecture.
 
@@ -287,7 +287,7 @@ Le fonctionnement est identique à celui utilisé dans la fonction d'écriture.
 
 ---
 
-# Envoi de l'adresse à lire
+### Envoi de l'adresse à lire
 
 ```C
 i2c_write(EEpromAddr);
@@ -297,7 +297,7 @@ Permet d'indiquer au composant l'adresse de départ de lecture.
 
 ---
 
-# Restart I2C
+### Restart I2C
 
 ```C
 i2c_reStart();
@@ -313,7 +313,7 @@ Cela permet :
 
 ---
 
-# Passage en mode lecture
+## Passage en mode lecture
 
 ```C
 i2c_write(MCP79411_EEPROM_R);
@@ -323,7 +323,7 @@ Le composant passe en mode lecture.
 
 ---
 
-# Lecture des données
+## Lecture des données
 
 ```C
 for(y = 0; y < NbBytes; y++)
@@ -333,9 +333,9 @@ Boucle principale de lecture.
 
 ---
 
-# Gestion des ACK et NACK
+## Gestion des ACK et NACK
 
-## Cas normal
+### Cas normal
 
 ```C
 pointeur[y] = i2c_read(true);
@@ -351,7 +351,7 @@ Je veux encore des données
 
 ---
 
-## Dernier octet
+### Dernier octet
 
 ```C
 pointeur[y] = i2c_read(false);
@@ -369,51 +369,13 @@ Cette étape est obligatoire dans le protocole I2C.
 
 ---
 
-# Fin de lecture
+### Fin de lecture
 
 ```C
 i2c_stop();
 ```
 
 Termine la communication et libère le bus.
-
----
-
-# Correction importante apportée
-
-## Problème détecté
-
-Dans la première version du code :
-
-```C
-*pointeur = i2c_read(true);
-```
-
-le pointeur n'était jamais incrémenté.
-
-Le programme écrivait donc toujours dans la même case mémoire.
-
-Résultat :
-
-seul le dernier octet lu était conservé.
-
----
-
-## Correction
-
-La lecture correcte est :
-
-```C
-pointeur[y] = i2c_read(true);
-```
-
-et :
-
-```C
-pointeur[y] = i2c_read(false);
-```
-
-Cette correction permet de stocker chaque octet dans une position différente du tableau.
 
 ---
 
@@ -436,6 +398,9 @@ for(index = 0; index <= appData.numBytesRead; index++){
 ```
 Nous allons scanner la trame complete pour trouver si il y a le caractere de fin de trame qui est "#".
 Si c'est le cas, la trame est conciderer comme valide pour la prochaine etape
+
+---
+
 ### 2. Reperage des debuts de chaque information
 Etand donné que nous devons trouvé les infos suivantes : 
 
@@ -463,6 +428,8 @@ Nous enregistrons aussi la position dans le tableau de caractere du debut de la 
 #### Important !
 Nous devons faire "+2" pour trouver le debut d'une valeur car la trame etant xxxF=3000xxxx, nous trouvons la valuer de F a l'adresse 3 et le debut du 3000 a l'adresse 5.
 Autre information importante, nous devons avoir une verification pour trouver si un "S" a été vu car le sinus etant defini aussi par "S", il sera detecter et supprimer ce qui nous fera perdre l'information du sinus.
+
+---
 
 ### 3. Optention des informations grace a atoi
 la fonction atoi est une fonction permettant de transformer une chaine de caractere en int.
