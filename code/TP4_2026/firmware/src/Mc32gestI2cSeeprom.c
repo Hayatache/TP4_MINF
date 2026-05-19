@@ -35,70 +35,93 @@ void I2C_InitMCP79411(void)
    bool Fast = true;
    i2c_init( Fast );
 } //end I2C_InitMCP79411
+// Ecriture d'un bloc de donnees dans la SEEPROM du MCP79411
+// ---------------------------------------------------------
 
-// Ecriture d'un bloc dans l'EEPROM du MCP79411 
 void I2C_WriteSEEPROM(void *SrcData, uint32_t EEpromAddr, uint16_t NbBytes)
 {
-    uint8_t i = 0;  // Variable pour la boucle de la page
-    uint8_t y = 0;  // Variable pour la boucle du nombre de page
-    uint8_t *i2cData = SrcData; // Pointeur qui prend l'adresse de SrcData pour le prendre comme un tableau
-    uint8_t NbBytesPage = 0;    // Nombre de bytes dans la page
-    // Boucle qui s'exécute pour chaque page
-    for(y = 0; y <= (NbBytes/EEPROM_PAGE_SIZE); y++)
+    uint8_t pageIndex = 0;                 // Index des pages EEPROM
+    uint8_t byteIndex = 0;                 // Index des bytes dans une page
+    uint8_t *writeBuffer = SrcData;        // Pointeur sur les donnees a ecrire
+    uint8_t bytesToWriteInPage = 0;        // Nombre de bytes a ecrire dans la page courante
+
+    // Parcours de toutes les pages necessaires a l'ecriture
+    for(pageIndex = 0; pageIndex <= (NbBytes / EEPROM_PAGE_SIZE); pageIndex++)
     {
-        // Test si on est à la dernière page
-        if(y == (NbBytes/EEPROM_PAGE_SIZE))
+        // Verification si on est sur la derniere page
+        if(pageIndex == (NbBytes / EEPROM_PAGE_SIZE))
         {
-            // La boucle de la page s'exécute le nombre de fois qu'il y a à écrire
-            NbBytesPage = NbBytes - EEPROM_PAGE_SIZE*(y);
+            // Nombre restant de bytes a ecrire
+            bytesToWriteInPage = NbBytes - EEPROM_PAGE_SIZE * pageIndex;
         }
         else
         {
-            // La boucle de la page s'exécute 8 fois
-            NbBytesPage = EEPROM_PAGE_SIZE;
+            // Page complete
+            bytesToWriteInPage = EEPROM_PAGE_SIZE;
         }
-        // Test si on peut écrire (ACK)
+
+        // Attente de disponibilite du composant EEPROM (ACK)
         do
         {
             i2c_start();
-        }while(!i2c_write(MCP79411_EEPROM_W));
-        // Écriture de l'adresse
-        i2c_write((uint8_t)EEpromAddr + (y * EEPROM_PAGE_SIZE));
-        // Boucle d'écriture d'une page
-        for(i = 0; i < NbBytesPage; i++)
+
+        } while(!i2c_write(MCP79411_EEPROM_W));
+
+        // Envoi de l'adresse de depart dans l'EEPROM
+        i2c_write((uint8_t)EEpromAddr + (pageIndex * EEPROM_PAGE_SIZE));
+
+        // Ecriture des donnees de la page
+        for(byteIndex = 0; byteIndex < bytesToWriteInPage; byteIndex++)
         {
-           i2c_write(i2cData[i+(y*EEPROM_PAGE_SIZE)]);
+           i2c_write(writeBuffer[byteIndex + (pageIndex * EEPROM_PAGE_SIZE)]);
         }
-        i2c_stop(); // Stop après chaque page
+
+        // Fin de transmission de la page
+        i2c_stop();
     }
+
 } // end I2C_WriteSEEPROM
 
 
+
+
+// Lecture d'un bloc de donnees depuis la SEEPROM du MCP79411
+// ----------------------------------------------------------
+
 void I2C_ReadSEEPROM(void *DstData, uint32_t EEpromAddr, uint16_t NbBytes)
 {
-    uint8_t i = 0;
-    uint8_t *i2cData = DstData;
-    // Test si on peut écrire (ACK)
+    uint8_t byteIndex = 0;
+    uint8_t *readBuffer = DstData;
+
+    // Attente de disponibilite du composant EEPROM (ACK)
     do
     {
         i2c_start();
-    }while(!i2c_write(MCP79411_EEPROM_W));
-    // Écriture de l'adresse
+
+    } while(!i2c_write(MCP79411_EEPROM_W));
+
+    // Envoi de l'adresse de lecture
     i2c_write((uint8_t)EEpromAddr);
-    // Restart
+
+    // Redemarrage du bus I2C pour passer en mode lecture
     i2c_reStart();
-    // Demande de lecture
+
+    // Envoi de l'adresse du composant en lecture
     i2c_write(MCP79411_EEPROM_R);
-    // Lecture du nombre de Bytes demandés
-    for(i = 0; i < NbBytes - 1; i++)
+
+    // Lecture des bytes avec ACK
+    for(byteIndex = 0; byteIndex < NbBytes - 1; byteIndex++)
     {
-        i2cData[i] = i2c_read(1);
+        readBuffer[byteIndex] = i2c_read(1);
     }
-    // Finir par une lecture sans ACK
-   i2cData[i] = i2c_read(0);
-   i2c_stop();  // Arret
+
+    // Dernier byte lu sans ACK
+    readBuffer[byteIndex] = i2c_read(0);
+
+    // Arret de la communication I2C
+    i2c_stop();
+
 } // end I2C_ReadSEEPROM
-   
 
 
 
