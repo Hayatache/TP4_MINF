@@ -1,383 +1,158 @@
 # TP4_MINF
 ## Explication complementaire gestion memoire de l'EEPROM
-## Initialisation du bus I2C
+# Explication complementaire du fonctionnement I2C avec la SEEPROM
 
-#### Fonction
-
-```C
-void I2C_InitMCP79411(void)
-{
-   bool Fast = true;
-   i2c_init( Fast );
-}
-```
+Le fonctionnement de la communication I2C avec la SEEPROM du MCP79411 se fait en plusieurs etapes afin de garantir une communication fiable.
 
 ---
 
-#### Explication
+## 1. Initialisation du bus I2C
 
-Cette fonction initialise la communication I2C.
+Avant toute communication, le bus I2C doit etre initialise.
 
 ```C
 bool Fast = true;
-```
-
-Cette variable permet de demander une initialisation en mode rapide.
-
-Ensuite :
-
-```C
 i2c_init(Fast);
 ```
 
-configure le module I2C du microcontrôleur.
+Le mode rapide est active afin d'utiliser une frequence I2C plus elevee.
 
 ---
 
-## Écriture dans l'EEPROM
+## 2. Verification de disponibilite de l'EEPROM
 
-### Fonction complète
-
-```C
-void I2C_WriteSEEPROM(void *SrcData, uint32_t EEpromAddr, uint16_t NbBytes)
-```
-
----
-
-#### Paramètres
-
-| Paramètre  | Description                     |
-| ---------- | ------------------------------- |
-| SrcData    | Adresse des données à écrire    |
-| EEpromAddr | Adresse de départ dans l'EEPROM |
-| NbBytes    | Nombre d'octets à écrire        |
-
----
-
-### Boucle principale d'écriture
-
-```C
-for(y = 0; y < NbBytes;)
-```
-
-Cette boucle continue tant que tous les octets n'ont pas été écrits.
-
-Le compteur n'est pas incrémenté dans le `for`.
-
-L'incrémentation est faite plus loin avec :
-
-```C
-y += NbBytesPage;
-```
-
-car le programme avance page par page.
-
----
-
-### Calcul de l'adresse courante
-
-```C
-current_addr = EEpromAddr + y;
-```
-
-Cette ligne permet de connaître l'adresse exacte où écrire les prochaines données.
-
----
-
-#### Exemple
-
-| Adresse de départ | y  | Adresse actuelle |
-| ----------------- | -- | ---------------- |
-| 32                | 0  | 32               |
-| 32                | 8  | 40               |
-| 32                | 16 | 48               |
-
----
-
-### Gestion des pages mémoire
-
-#### Calcul de l'espace restant
-
-```C
-espaceRestant = MCP79411_PAGE_SIZE - (current_addr % MCP79411_PAGE_SIZE);
-```
-
-L'EEPROM fonctionne par pages mémoire.
-
-Il est donc important de ne pas écrire au-delà d'une page.
-
-Cette ligne calcule le nombre d'octets encore disponibles avant la fin de la page actuelle.
-
----
-
-#### Exemple
-
-Si :
-
-| Taille page | Adresse actuelle |
-| ----------- | ---------------- |
-| 8           | 14               |
-
-Alors :
-
-```C
-14 % 8 = 6
-```
-
-Le programme est au 6ème octet de la page.
-
-Il reste donc :
-
-```C
-8 - 6 = 2 octets
-```
-
-avant de changer de page.
-
----
-
-### Choix du nombre d'octets à écrire
-
-```C
-if((NbBytes - y) < espaceRestant)
-{
-    NbBytesPage = NbBytes - y;
-}
-else
-{
-    NbBytesPage = espaceRestant;
-}
-```
-
-Cette partie permet de choisir combien d'octets peuvent être écrits sans dépasser la page.
-
----
-
-#### Deux cas possibles
-
-| Situation                                         | Action                                                  |
-| ------------------------------------------------- | ------------------------------------------------------- |
-| Il reste moins de données que la place disponible | Toutes les données sont écrites                         |
-| Il reste trop de données                          | Le programme écrit uniquement ce qui tient dans la page |
-
----
-
-### Attente de disponibilité du composant
+Avant chaque lecture ou ecriture, le programme attend que l'EEPROM soit disponible.
 
 ```C
 do
 {
     i2c_start();
-    ack = i2c_write(MCP79411_EEPROM_W);
 
-    if(ack == false)
-    {
-        i2c_stop();
-    }
-
-    timeout++;
-
-    if(timeout > 1000)
-    {
-        return;
-    }
-
-} while (ack == false);
+} while(!i2c_write(MCP79411_EEPROM_W));
 ```
 
-Après une écriture, l'EEPROM peut être occupée pendant quelques millisecondes.
+Le programme envoie l'adresse du composant jusqu'a recevoir un ACK.
 
-Pendant ce temps, elle refuse de communiquer.
+### Important !
 
-Le programme tente donc de communiquer jusqu'à ce que le composant réponde correctement.
+Cette verification est necessaire car l'EEPROM peut etre occupee pendant son ecriture interne.
+
+Sans cela :
+- certaines donnees pourraient etre perdues
+- la communication pourrait devenir instable
 
 ---
 
-## Envoi de l'adresse mémoire
+## 3. Envoi de l'adresse memoire
+
+Une fois le composant disponible, l'adresse memoire de depart est envoyee.
 
 ```C
-i2c_write((uint8_t)current_addr);
+i2c_write((uint8_t)EEpromAddr);
 ```
 
-Cette instruction envoie l'adresse interne de l'EEPROM.
+Cette adresse indique :
+- ou commencer la lecture
+- ou commencer l'ecriture
 
 ---
 
-## Envoi des données
+## 4. Gestion des pages EEPROM
+
+L'EEPROM fonctionne avec des pages de taille fixe.
 
 ```C
-for(i = 0; i < NbBytesPage; i++)
-{
-    i2c_write(pointeur[y + i]);
-}
+for(pageIndex = 0; pageIndex <= (NbBytes / EEPROM_PAGE_SIZE); pageIndex++)
 ```
 
-Cette boucle envoie tous les octets de la page.
+Le programme decoupe automatiquement les donnees en plusieurs pages afin de respecter la taille maximale d'ecriture.
 
 ---
 
-#### Exemple
+## 5. Ecriture des donnees
 
-Si :
-
-```C
-y = 8
-```
-
-Alors :
+Les donnees sont envoyees byte par byte.
 
 ```C
-pointeur[8]
-pointeur[9]
-pointeur[10]
+i2c_write(writeBuffer[byteIndex + (pageIndex * EEPROM_PAGE_SIZE)]);
 ```
 
-seront envoyés.
-
----
-
-## Fin de transmission
+Une fois la page envoyee :
 
 ```C
 i2c_stop();
 ```
 
-Cette instruction termine la communication I2C et libère le bus.
+Le STOP indique la fin de transmission.
 
 ---
 
-## Passage à la page suivante
+## 6. Passage en mode lecture
 
-```C
-y += NbBytesPage;
-```
-
-Permet de passer directement au bloc suivant.
-
----
-
-## Lecture dans l'EEPROM
-
-### Fonction complète
-
-```C
-void I2C_ReadSEEPROM(void *DstData, uint32_t EEpromAddr, uint16_t NbBytes)
-```
-
----
-
-### Vérification de sécurité
-
-```C
-if(NbBytes == 0)
-{
-    return;
-}
-```
-
-Si aucun octet n'est demandé, la fonction quitte immédiatement.
-
----
-
-### Vérification de disponibilité
-
-Le programme attend que l'EEPROM soit disponible avant de commencer la lecture.
-
-Le fonctionnement est identique à celui utilisé dans la fonction d'écriture.
-
----
-
-### Envoi de l'adresse à lire
-
-```C
-i2c_write(EEpromAddr);
-```
-
-Permet d'indiquer au composant l'adresse de départ de lecture.
-
----
-
-### Restart I2C
+Pour lire les donnees, le programme passe du mode ecriture au mode lecture.
 
 ```C
 i2c_reStart();
-```
-
-Le restart permet de conserver le contrôle du bus sans envoyer de STOP.
-
-Cela permet :
-
-1. d'envoyer l'adresse mémoire,
-2. de changer en mode lecture,
-3. de commencer la réception des données.
-
----
-
-## Passage en mode lecture
-
-```C
 i2c_write(MCP79411_EEPROM_R);
 ```
 
-Le composant passe en mode lecture.
+Le `reStart` permet de garder le controle du bus sans couper la communication.
 
 ---
 
-## Lecture des données
+## 7. Lecture des donnees
+
+Lecture des bytes avec ACK :
 
 ```C
-for(y = 0; y < NbBytes; y++)
+readBuffer[byteIndex] = i2c_read(1);
 ```
 
-Boucle principale de lecture.
+Le ACK indique que la lecture continue.
+
+Dernier byte sans ACK :
+
+```C
+readBuffer[byteIndex] = i2c_read(0);
+```
+
+Le NACK indique la fin de lecture.
 
 ---
 
-## Gestion des ACK et NACK
+## Resume du fonctionnement
 
-### Cas normal
-
-```C
-pointeur[y] = i2c_read(true);
-```
-
-Le microcontrôleur envoie un ACK.
-
-Cela signifie :
+### Ecriture
 
 ```text
-Je veux encore des données
+START
+↓
+Adresse composant (Write)
+↓
+Adresse memoire
+↓
+Donnees
+↓
+STOP
 ```
 
----
-
-### Dernier octet
-
-```C
-pointeur[y] = i2c_read(false);
-```
-
-Le microcontrôleur envoie un NACK.
-
-Cela signifie :
+### Lecture
 
 ```text
-Lecture terminée
+START
+↓
+Adresse composant (Write)
+↓
+Adresse memoire
+↓
+RESTART
+↓
+Adresse composant (Read)
+↓
+Lecture des donnees
+↓
+STOP
 ```
-
-Cette étape est obligatoire dans le protocole I2C.
-
----
-
-### Fin de lecture
-
-```C
-i2c_stop();
-```
-
-Termine la communication et libère le bus.
-
----
 
 ## Explication complementaire decodage de la trame
 
